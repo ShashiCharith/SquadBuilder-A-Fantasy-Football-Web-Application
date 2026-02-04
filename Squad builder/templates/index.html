@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Home
+{% endblock %}
+
+{% block main %}
+    <div class="p-5 mb-4 bg-white rounded-3 shadow-sm text-center">
+        <div class="container-fluid py-5">
+            <h1 class="display-5 fw-bold">Build Your Ultimate Football Squad</h1>
+            <p class="col-md-8 fs-4 mx-auto">Create a budget-based Fantasy Team, build your all-star Dream Team, and see how your squads stack up against the community.</p>
+            {% if session.user_id %}
+                <a class="btn btn-primary btn-lg mt-3" href="/dashboard" role="button">Go to Your Dashboard</a>
+            {% else %}
+                <a class="btn btn-primary btn-lg mt-3" href="/register" role="button">Get Started for Free</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <h2 class="text-center mb-4">Top Rated Teams</h2>
+
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for team in top_teams %}
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ team.team_name }}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">By: {{ team.username }}</h6>
+                        <p class="card-text">
+                            <strong>Team Type:</strong> <span class="badge bg-secondary">{{ team.team_type|capitalize }}</span>
+                        </p>
+                        <p class="card-text fs-4">
+                            <strong>Rating:</strong> ⭐ {{ '%.1f'|format(team.avg_rating) if team.avg_rating else 'N/A' }} / 10
+                        </p>
+                        <a href="/team/{{ team.id }}" class="btn btn-outline-primary">View Squad</a>
+                    </div>
+                    <div class="card-footer text-muted">
+                        Created on {{ team.created_at.strftime('%Y-%m-%d') }}
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-12">
+                <p class="text-center text-muted">No teams have been rated yet. Explore and be the first to rate a team!</p>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

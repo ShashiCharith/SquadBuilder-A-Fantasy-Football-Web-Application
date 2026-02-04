@@ -1,0 +1,227 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    {{ team.team_name }}
+{% endblock %}
+
+{% block main %}
+<style>
+    #pitch-view {
+        background-image: url('{{background}}');
+        background-size: cover;
+        background-position: center;
+        width: 100%;
+        height: 800px; /* Adjust height as needed */
+        position: relative;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .player-slot {
+        position: absolute;
+        width: 80px;
+        height: 100px;
+        text-align: center;
+    }
+    .player-token {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #fff;
+        background-color: #343a40;
+    }
+    .player-name {
+        color: white;
+        font-size: 12px;
+        font-weight: bold;
+        background-color: rgba(0, 0, 0, 0.6);
+        border-radius: 4px;
+        padding: 2px 4px;
+        margin-top: 2px;
+        white-space: nowrap;
+    }
+    /* Star Rating CSS */
+    .star-rating {
+        font-size: 2.5rem;
+        cursor: pointer;
+    }
+    .star-rating .star {
+        color: #d3d3d3; /* Light grey for unselected stars */
+    }
+    .star-rating .star.selected,
+    .star-rating .star:hover,
+    .star-rating .star:hover ~ .star {
+        color: #ffc107; /* Yellow for selected/hovered stars */
+    }
+    /* This makes sure that hovering over a star also highlights the ones before it */
+    .star-rating:hover .star {
+      color: #ffc107;
+    }
+    .star-rating .star:hover ~ .star {
+      color: #d3d3d3;
+    }
+
+</style>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-8">
+            <div id="pitch-view">
+                {% for player in roster_with_formation %}
+                    <div class="player-slot" style="top: {{ player.top }}; left: calc({{ player.left }} - 40px);">
+                        <img src="{{ player.image_url }}" class="player-token" alt="{{ player.name }}">
+                        <div class="player-name">{{ player.name }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h3 class="card-title">{{ team.team_name }}</h3>
+                    <h6 class="card-subtitle mb-2 text-muted">By: {{ team.username }}</h6>
+                    <hr>
+                    <p>
+                        <strong>Team Type:</strong>
+                        {% if team.team_type == 'fantasy' %}
+                            <span class="badge bg-primary">Fantasy Team</span>
+                        {% else %}
+                            <span class="badge bg-success">Dream Team</span>
+                        {% endif %}
+                    </p>
+                    {% if team.team_type == 'fantasy' %}
+                    <p><strong>Final Cost:</strong> ${{ team.total_cost }}M</p>
+                    {% endif %}
+
+                    <div class="mt-4">
+                        <h4>Community Rating</h4>
+                        <p class="display-4 fw-bold">⭐ {{ '%.1f'|format(avg_rating) if avg_rating else 'N/A' }} / 10</p>
+                        <p class="text-muted">Based on {{ num_ratings }} vote(s)</p>
+                    </div>
+                    <hr>
+
+                    <div class="mt-4">
+                        {% if session.user_id %}
+                            {% if session.user_id == team.user_id %}
+                                <div class="alert alert-info">This is your own team.</div>
+                            {% else %}
+                                <h5>Your Rating</h5>
+                                <div class="star-rating" id="user-rating-widget" data-team-id="{{ team.id }}">
+                                    <span class="star" data-value="1">★</span>
+                                    <span class="star" data-value="2">★</span>
+                                    <span class="star" data-value="3">★</span>
+                                    <span class="star" data-value="4">★</span>
+                                    <span class="star" data-value="5">★</span>
+                                    <span class="star" data-value="6">★</span>
+                                    <span class="star" data-value="7">★</span>
+                                    <span class="star" data-value="8">★</span>
+                                    <span class="star" data-value="9">★</span>
+                                    <span class="star" data-value="10">★</span>
+                                </div>
+                                <div class="my-3">
+                                    <textarea id="comment-box" class="form-control" rows="3" placeholder="Leave a comment (optional)">{{ user_rating_info.comment if user_rating_info and user_rating_info.comment }}</textarea>
+                                </div>
+                                <button id="submit-rating" class="btn btn-primary">Submit Review</button>
+                                <small id="rating-feedback" class="form-text text-muted ms-2"></small>
+                            {% endif %}
+                        {% else %}
+                            <a href="/login" class="btn btn-primary">Log in to rate and comment this team</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Community Comments</h5>
+                    <div id="comments-list" style="max-height: 400px; overflow-y: auto;">
+                        {% for comment in comments %}
+                            <div class="mb-3 border-bottom pb-2">
+                                <strong>{{ comment.username }}:</strong>
+                                <p class="mb-0 fst-italic">"{{ comment.comment }}"</p>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No comments yet. Be the first to leave one!</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ratingWidget = document.getElementById('user-rating-widget');
+    if (!ratingWidget) return; // Exit if the widget is not on the page
+
+    const stars = ratingWidget.querySelectorAll('.star');
+    const teamId = ratingWidget.dataset.teamId;
+    const commentBox = document.getElementById('comment-box');
+    const submitBtn = document.getElementById('submit-rating');
+    const feedbackEl = document.getElementById('rating-feedback');
+    let currentRating = {{ user_rating_info.rating_value if user_rating_info else 0 }};
+
+    function highlightStars(value) {
+        stars.forEach(star => {
+            star.classList.toggle('selected', star.dataset.value <= value);
+        });
+    }
+
+    function handleMouseOver(event) {
+        const value = parseInt(event.target.dataset.value);
+        stars.forEach(star => {
+             star.classList.toggle('hover', star.dataset.value <= value);
+        });
+    }
+
+    function handleMouseOut() {
+        stars.forEach(star => star.classList.remove('hover'));
+    }
+
+    // Initialize stars based on previous rating
+    highlightStars(currentRating);
+
+    stars.forEach(star => {
+        star.addEventListener('click', () => {
+            currentRating = parseInt(star.dataset.value);
+            highlightStars(currentRating);
+        });
+        star.addEventListener('mouseover', handleMouseOver);
+        star.addEventListener('mouseout', handleMouseOut);
+    });
+
+    submitBtn.addEventListener('click', async () => {
+        if (currentRating === 0) {
+            feedbackEl.textContent = 'Please select a star rating first.';
+            return;
+        }
+
+        const commentText = commentBox.value;
+        feedbackEl.textContent = 'Saving...';
+        submitBtn.disabled = true;
+
+        try {
+            const response = await fetch(`/rate_team/${teamId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rating: currentRating, comment: commentText })
+            });
+            const result = await response.json();
+
+            if (response.ok) {
+                feedbackEl.textContent = 'Saved! Refreshing...';
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                feedbackEl.textContent = `Error: ${result.message || 'Could not save.'}`;
+                submitBtn.disabled = false;
+            }
+        } catch (error) {
+            console.error('Submission failed:', error);
+            feedbackEl.textContent = 'An error occurred. Please try again.';
+            submitBtn.disabled = false;
+        }
+    });
+});
+</script>
+{% endblock %}

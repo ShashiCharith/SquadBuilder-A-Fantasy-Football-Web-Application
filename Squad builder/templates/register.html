@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Register
+{% endblock %}
+
+{% block main %}
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="card-title text-center mb-4">Create Account</h3>
+                    <form action="/register" method="post">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input autocomplete="off" autofocus class="form-control" id="username" name="username" placeholder="Choose a username" type="text" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input class="form-control" id="password" name="password" placeholder="Enter a password" type="password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmation" class="form-label">Confirm Password</label>
+                            <input class="form-control" id="confirmation" name="confirmation" placeholder="Confirm your password" type="password" required>
+                        </div>
+                        <button class="btn btn-primary w-100 mt-3" type="submit">Register</button>
+                    </form>
+                    <div class="text-center mt-3">
+                        <small class="text-muted">Already have an account? <a href="/login">Log In</a></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
